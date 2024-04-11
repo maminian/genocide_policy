@@ -190,7 +190,10 @@ def is_not_ongoing(event, prior_event_list, k=1, L=1):
             return False
     return True
 
-def ewp_2022_23_raw(fname="sra_2023.csv"):
+# TODO: uniformize pointing to the data folder
+# across these scripts. Some are in daisy-chained 
+# modules. Not great.
+def ewp_2022_23_raw(fname="../data/" + "sra_2023.csv"):
     '''
     Loads the Early Warning Project 2023 projections/scores 
     csv file, available at 
