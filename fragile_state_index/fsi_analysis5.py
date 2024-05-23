@@ -97,7 +97,6 @@ train_idxs = np.zeros((nboots, 2*ns), dtype=int)
 test_idxs = np.zeros((nboots, 2*(ntmk-ns)), dtype=int)
 
 for i in range(nboots):
-    #model = linear_model.ElasticNet(max_iter=1e4, l1_ratio=0.05, positive=False) # idk lol
     model = linear_model.LogisticRegression(max_iter=1000, penalty='elasticnet', solver='saga', l1_ratio=0.05)
     
     not_tmk_idx_choice = np.random.choice(not_tmk_idx, ntmk, replace=False)
