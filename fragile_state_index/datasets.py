@@ -76,16 +76,16 @@ def build_fsi_predicting_tmk(k=2,L=1, min_year=2006, max_year=2023, track_ongoin
         if i not in df_p.columns:
             df_p[i] = np.zeros(df_p.shape[0])
     
-    # pad with non-TMK countries where needed
+    # pad the dataframe with non-TMK countries where needed
     all_fsi_countries = _df_fsi['Country'].unique()
     non_tmk_countries = np.setdiff1d( all_fsi_countries, df_p.index )
-    _df_null = pandas.DataFrame(data = np.zeros( (len(non_tmk_countries), df_p.shape[1] ) ),
+    _df_non_tmk = pandas.DataFrame(data = np.zeros( (len(non_tmk_countries), df_p.shape[1] ) ),
                                 columns = df_p.columns, 
                                 index = non_tmk_countries
                                 )
     
     #
-    df_p = df_p.append(_df_null)
+    df_p = pandas.concat([df_p, _df_non_tmk])
     df_p.sort_index(inplace=True)
     
     tmk_only_long = df_p.melt(ignore_index=False)
@@ -94,6 +94,7 @@ def build_fsi_predicting_tmk(k=2,L=1, min_year=2006, max_year=2023, track_ongoin
     # record (country, year) values if we want to not do prediction 
     # on ongoing events.
     tmk_country_years = list(zip(tmk_only_long.index, tmk_only_long['year']))
+    
     
     # TODO: Code assumes row ordering is consistent.
     # CANNOT PROCEED WITH CODE AS-IS IF THIS IS NOT TRUE.
@@ -217,3 +218,5 @@ def our_bootstrap_results_k1_L1(fname="bootstrap_pred_results_k1_L1.csv"):
     '''
     df = pandas.read_csv(fname)
     return df
+    
+
