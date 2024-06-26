@@ -20,8 +20,8 @@ X = df.iloc[:,3:-3]
 X.drop('SFTGcode', axis=1, inplace=True)
 y = df.iloc[:,-3:]
 
-#pca = decomposition.PCA()
-pca = decomposition.SparsePCA(n_components=2)
+pca = decomposition.PCA()
+#pca = decomposition.SparsePCA(n_components=2) # todo: percent variance explained with these vectors
 #pca = decomposition.KernelPCA(n_components=2, kernel='rbf')
 
 
@@ -46,12 +46,15 @@ fig2,ax2 = plt.subplots(constrained_layout=True)
 ypos = np.arange(X.shape[1])
 ypos = ypos[::-1]
 
-ax2.barh(ypos, pca.components_[0], label='PCA1 weights')
-ax2.barh(ypos, pca.components_[1], label='PCA2 weights')
+ax2.barh(ypos, pca.components_[0], label='PC1 weights')
+ax2.barh(ypos, pca.components_[1], label='PC2 weights')
 
 ax2.legend()
-ax2.set(xlabel='Principal component weight', yticks=[])
+ax2.set(xlabel='Principal component weight', yticks=np.arange(X.shape[1]), yticklabels=X.columns)
 
 fig2.show()
 
+print('pct variance explained...')
+print('pc1: ', pca.explained_variance_ratio_[0])
+print('pc2: ', pca.explained_variance_ratio_[1])
 
