@@ -58,7 +58,7 @@ RESEARCH QUESTION:
     https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html
 '''
 
-k=2 # number of years of data prior to prediction 
+k=1 # number of years of data prior to prediction 
 L=1 # number of years out to forecast
 X,y,meta = datasets.build_fsi_predicting_tmk(k=k, L=L, track_ongoing=False)
 

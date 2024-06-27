@@ -46,6 +46,12 @@ def build_fsi_predicting_tmk(k=2,L=1, min_year=2006, max_year=2023, track_ongoin
     this comes from the perspective of pre-emption (the types of 
     actions that can be taken are very different before and after 
     an event has taken place.)
+    
+    **** NOTE: 
+    When k>1, features are numbered by "year" counting
+    in increasing order from the earliest year of data. 
+    For example, when k=2, "*_Y1" refers to the current year; "*_Y0" refers 
+    to the previous year.
     '''
     df_tmk = _df_tmk[ _df_tmk['year'] >= min_year]
     
@@ -148,8 +154,8 @@ def build_fsi_predicting_tmk(k=2,L=1, min_year=2006, max_year=2023, track_ongoin
     features_plain = df_fsi_pivot[tmk_minyear].columns.values # C1, C2, ..., S2, S1
     features = np.concatenate([['%s_Y%i'%(fp, j) for fp in features_plain] for j in range(k)])
 
-    print(tmk_events_tracked)
-    print(len(tmk_events_tracked))    
+    #print(tmk_events_tracked)
+    #print(len(tmk_events_tracked))
 
     # must have no NaN at this point!
     assert( np.all(~np.isnan(X)) and np.all(~np.isnan(y)) )
