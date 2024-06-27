@@ -106,6 +106,9 @@ ax2.set(xlabel='Principal component weight', yticks=np.arange(X.shape[1]), ytick
 
 fig.savefig('pca_ewp_hex_hist.pdf', bbox_inches='tight')
 fig2.savefig('pca_ewp_pc_weights.pdf', bbox_inches='tight')
+
+fig.savefig('pca_ewp_hex_hist.png', bbox_inches='tight')
+fig2.savefig('pca_ewp_pc_weights.png', bbox_inches='tight')
 #####################
 fig.show()
 fig2.show()
