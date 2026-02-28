@@ -137,8 +137,13 @@ def test_timings(nbs=10, codes=['id_target_gps'], print_every=1, nproc=1):
     import copy
 
     pool = multiprocessing.Pool(nproc) # number of asynchronous processes (parallelism).
-    inputs = itertools.product(zip(range(nbs), nbs*(print_every,), nbs*(nbs,) ,nbs*[copy.deepcopy(df_X)], nbs*[copy.deepcopy(df_Y)]), codes)
+    inputs = itertools.product(
+        zip(range(nbs), nbs*(print_every,), nbs*(nbs,) ,nbs*[copy.deepcopy(df_X)], nbs*[copy.deepcopy(df_Y)]),
+        codes
+    )
+
     results = pool.map(bootstrap_iteration, inputs)
+    
     results = pd.concat(results, axis=0, ignore_index=True)
     return results
 #
@@ -147,17 +152,17 @@ def test_timings(nbs=10, codes=['id_target_gps'], print_every=1, nproc=1):
 
 if __name__=="__main__":
 
-    nbs = 100 # number of bootstrap samples
-    print_every=5 # print an integer at iteration multiples of this.
+    nbs = 10 # number of bootstrap samples
+    print_every=1 # print an integer at iteration multiples of this.
     
     import multiprocessing
     import itertools
     import copy
     
     pool = multiprocessing.Pool(1) # number of asynchronous processes (parallelism).
-    df_expt_mid = test_timings(nbs, codes=['id_target_gps', 'coercive_control', 'existential_threat'], print_every=5)
-    df_expt_mini = pd.concat(df_expt_mid, axis=0, ignore_index=True)
-    df_expt_mini.to_csv('ebg_ewp_expt_9feb2026_mid.csv', index=None)
+    df_expt_result = test_timings(nbs, codes=['id_target_gps', 'coercive_control', 'existential_threat'], print_every=print_every)
+    
+    df_expt_result.to_csv('ebg_ewp_expt_18feb2026.csv', index=None)
 
 
 
