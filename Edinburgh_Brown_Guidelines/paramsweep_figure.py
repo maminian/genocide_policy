@@ -6,11 +6,12 @@ from matplotlib import ticker
 import numpy as np
 
 sns.set_theme(style='whitegrid')
+sns.set_context("talk") # changes text scale; "talk", "paper", or "poster"
 
 LR_COLOR = '#f9fff9' # pale pink/purple
 RF_COLOR = '#fff9ff' # pale green
 
-WHICH = 'f1' # acc or f1
+WHICH = 'acc' # acc or f1
 
 #################
 
@@ -46,7 +47,9 @@ for _suffix,_df_ref in zip(['orig','vs_shuffle'], [df_no_shuffle, df_paramsweep]
         # strip the "code = ..."
         ax[0,j].set_title(ax[0,j].get_title().split('=')[-1].strip())
         ax[1,j].set(xlabel='test size')
-        # write the sizes as percentages.
+        # write the sizes as percentages; 
+        # clip to just 20, 40, 60, 80.
+        ax[1,j].xaxis.set_major_locator(ticker.MultipleLocator(2,1))
         ax[1,j].xaxis.set_major_formatter(ticker.FuncFormatter(lambda x,p: f'{10+int(x*10)}%'))
         
     for i in range(np.shape(ax)[0]):
@@ -72,6 +75,6 @@ for _suffix,_df_ref in zip(['orig','vs_shuffle'], [df_no_shuffle, df_paramsweep]
     fig.subplots_adjust(hspace=0.2)
 
     fig.show()
-    fig.savefig(f'paramsweep_results_{WHICH}_{_suffix}.png', bbox_inches='tight')
-    fig.savefig(f'paramsweep_results_{WHICH}_{_suffix}.pdf', bbox_inches='tight')
+    #fig.savefig(f'paramsweep_results_{WHICH}_{_suffix}.png', bbox_inches='tight')
+    #fig.savefig(f'paramsweep_results_{WHICH}_{_suffix}.pdf', bbox_inches='tight')
     

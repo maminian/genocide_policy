@@ -3,7 +3,8 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, f1_score
+#from sklearn.metrics import accuracy_score, f1_score, balanced_accuracy_score, precision_sc
+from sklearn import metrics
 
 import os
 
@@ -24,6 +25,7 @@ df_X = df_X.iloc[:,3:-3] # exclude country, COW, year; and the three binary indi
 df_Y = df[['coercive_control', 'id_target_gps', 'existential_threat']]
 
 def bootstrap_iteration(inputs):
+    '''
     #
     # outputs: for the given seed, a table of both logistic regression and random forest results and the 
     # matched results with random shuffling of labels, for all test set sizes, for a fixed coding.
@@ -36,7 +38,16 @@ def bootstrap_iteration(inputs):
     # print_every: integer, setting, used in a flag to determine whether a call prints when it's finished.
     # max_iter: integer, setting, used in a flag to determine whether a call prints when it's finished.
     # code: string, one of 'coercive_control', 'id_target_gps', 'existential_threat')
-    #
+    '''
+    
+    # sklearn metric function names
+    my_metrics = ['accuracy_score', 'precision_score', 'recall_score', 'balanced_accuracy_score', 'f1_score']
+    
+    # just for the column headers
+    metric_names_short = ['acc', 'precision', 'recall', 'balanced_acc', 'f1']
+    
+    ####
+    
     iter_tuple, code = inputs
     bs_iter, print_every, max_iter, df_X_copy, df_Y_copy = iter_tuple
     
@@ -70,45 +81,48 @@ def bootstrap_iteration(inputs):
         model_lr = LogisticRegression(max_iter = 200)
         model_lr.fit(X_train, Y_train)
         y_pred_lr = model_lr.predict(X_test)
-        acc_lr = accuracy_score(Y_test, y_pred_lr)
-        f1_lr = f1_score(Y_test, y_pred_lr)
         
         model_rf = RandomForestClassifier()
         model_rf.fit(X_train,Y_train)
         y_pred_rf = model_rf.predict(X_test)
-        acc_rf = accuracy_score(Y_test, y_pred_rf)
-        f1_rf = f1_score(Y_test, y_pred_rf)
         
         # 
         # each row:
         # RNG seed, guidlines code, classifier, short classifier, test set size, accuracy, shuffled/not shuffled
-        rows.append([_seed, bs_iter, code, 'Logistic Regression', 'LR', k/10, acc_lr, f1_lr, 'N'])
-        rows.append([_seed, bs_iter, code, 'Random Forest', 'RF', k/10, acc_lr, f1_rf, 'N'])
+        metrics_lr = [getattr(metrics, _m)(Y_test, y_pred_lr) for _m in my_metrics]
+        metrics_rf = [getattr(metrics, _m)(Y_test, y_pred_rf) for _m in my_metrics]
+        
+        rows.append([_seed, bs_iter, code, 'Logistic Regression', 'LR', k/10, 'N', *metrics_lr])
+        rows.append([_seed, bs_iter, code, 'Random Forest', 'RF', k/10, 'N', *metrics_rf])
         ##############
 
-       # shuffled
+        # shuffled
         X_train, X_test, Y_train, Y_test = splits_shuffle[k]
         
         model_lr = LogisticRegression(max_iter = 200)
         model_lr.fit(X_train, Y_train)
-        y_pred_lr = model_lr.predict(X_test)
-        acc_lr = accuracy_score(Y_test, y_pred_lr)
-        f1_lr = f1_score(Y_test, y_pred_lr)
+        y_pred_lr_shuff = model_lr.predict(X_test)
         
+        ###
         model_rf = RandomForestClassifier()
         model_rf.fit(X_train,Y_train)
-        y_pred_rf = model_rf.predict(X_test)
-        acc_rf = accuracy_score(Y_test, y_pred_rf)
-        f1_rf = f1_score(Y_test, y_pred_rf)
+        y_pred_rf_shuff = model_rf.predict(X_test)
         
-        rows.append([_seed, bs_iter, code, 'Logistic Regression', 'LR', k/10, acc_lr, f1_lr, 'Y'])
-        rows.append([_seed, bs_iter, code, 'Random Forest', 'RF', k/10, acc_lr, f1_rf, 'Y'])
+        ###
+        
+        metrics_lr_shuff = [getattr(metrics, _m)(Y_test, y_pred_lr_shuff) for _m in my_metrics]
+        metrics_rf_shuff = [getattr(metrics, _m)(Y_test, y_pred_rf_shuff) for _m in my_metrics]
+                
+        rows.append([_seed, bs_iter, code, 'Logistic Regression', 'LR', k/10, 'Y', *metrics_lr_shuff])
+        rows.append([_seed, bs_iter, code, 'Random Forest', 'RF', k/10, 'Y', *metrics_rf_shuff])
         
             
     #########
     # compile and output.
-    outputs = pd.DataFrame(rows, columns=['rng_seed', 'bootstrap_iter', 'code', 'classifier', 'clf', 'test_size', 'acc', 'f1', 'shuffled'])
-    
+    outputs = pd.DataFrame(rows, columns=['rng_seed', 'bootstrap_iter', 'code', 'classifier', 'clf', 'test_size', 'shuffled', *metric_names_short])
+    str_iter = str(bs_iter).zfill(8)
+    _fname = f'iter_{str_iter}_{short_name}.csv'
+    outputs.to_csv('outputs/'+_fname, index=False)
     if ((bs_iter+1)%print_every)==0:
         print(f'Iter {bs_iter+1} of {max_iter} done.')
     
@@ -123,6 +137,7 @@ def bootstrap_iteration(inputs):
 # On the 6-core/12 with hyperthreading I seem to get one iteration done in about 10~12 seconds.
 
 def test_timings(nbs=10, codes=['id_target_gps'], print_every=1, nproc=1):
+    '''
     # nbs: number of bootstraps to pass to itertools (each call handles a single bootstrap sample).
     # codes: list of target variables to pass through to itertools.product(). if you want to use this for the whole shebang, 
     #     pass all three ['id_target_gps', 'coercive_control', 'existential_threat']
@@ -132,6 +147,7 @@ def test_timings(nbs=10, codes=['id_target_gps'], print_every=1, nproc=1):
     #
     # Outputs: dataframe of accuracies across all parameter choices; column names:
     #    [rng_seed, bootstrap_iter, code, classifier, clf, test_size, acc, shuffled]
+    '''
     import multiprocessing
     import itertools
     import copy
@@ -162,7 +178,4 @@ if __name__=="__main__":
     pool = multiprocessing.Pool(1) # number of asynchronous processes (parallelism).
     df_expt_result = test_timings(nbs, codes=['id_target_gps', 'coercive_control', 'existential_threat'], print_every=print_every)
     
-    df_expt_result.to_csv('ebg_ewp_expt_18feb2026.csv', index=None)
-
-
-
+    df_expt_result.to_csv('ebg_ewp_expt_02mar2026.csv', index=None)
