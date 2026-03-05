@@ -11,11 +11,11 @@ sns.set_context("talk") # changes text scale; "talk", "paper", or "poster"
 LR_COLOR = '#f9fff9' # pale pink/purple
 RF_COLOR = '#fff9ff' # pale green
 
-WHICH = 'acc' # acc or f1
+WHICH = 'f1' # acc or f1
 
 #################
 
-df_paramsweep = pd.read_csv('ebg_ewp_expt_18feb2026.csv')
+df_paramsweep = pd.read_csv('ebg_ewp_expt_02mar2026.csv')
 df_no_shuffle = df_paramsweep[df_paramsweep['shuffled']=='N']
 
 
@@ -31,6 +31,7 @@ for _suffix,_df_ref in zip(['orig','vs_shuffle'], [df_no_shuffle, df_paramsweep]
     g = sns.catplot(data=_df_ref, 
                     kind='box', col='code', row='classifier',
                     x='test_size', y=WHICH, hue='shuffled', 
+                    whis=(10, 90), # the [10,90] quantile interval instead of standard boxplot
                     fill=True,
                     gap=.2,
                     margin_titles=True,
@@ -75,6 +76,14 @@ for _suffix,_df_ref in zip(['orig','vs_shuffle'], [df_no_shuffle, df_paramsweep]
     fig.subplots_adjust(hspace=0.2)
 
     fig.show()
-    #fig.savefig(f'paramsweep_results_{WHICH}_{_suffix}.png', bbox_inches='tight')
-    #fig.savefig(f'paramsweep_results_{WHICH}_{_suffix}.pdf', bbox_inches='tight')
-    
+    fig.savefig(f'paramsweep_results_{WHICH}_{_suffix}.png', bbox_inches='tight')
+    fig.savefig(f'paramsweep_results_{WHICH}_{_suffix}.pdf', bbox_inches='tight')
+#
+
+# print a brief summary.
+print(
+df_paramsweep[['code', 'shuffled', 'clf', 'acc', 'f1']].groupby(['clf', 'code', 'shuffled']).agg(
+    {'acc': lambda x: list(np.quantile(x,[0.1,0.5,0.9]).round(2)),
+     'f1': lambda x: list(np.quantile(x,[0.1,0.5,0.9]).round(2))} # accepts lists but not np.arrays... even if 1d..
+)
+)
