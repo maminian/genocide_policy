@@ -1,27 +1,23 @@
 #import pandas
 #import seaborn as sns
 from matplotlib import pyplot as plt
+from matplotlib import ticker
 import pandas
 import numpy as np
 
 import load_fsi
-import vis_tools_fsi
+#import vis_tools_fsi
 import load_tmk
 import datasets
+import seaborn
 
 #
+
+import datetime
+tstamp = datetime.datetime.now().strftime('%Y-%b-%d-%H:%M')
 
 from sklearn import linear_model # for Lasso, etc.
 from sklearn import metrics      # for, e.g., sklearn.metrics.roc_auc_score
-
-#
-
-import seaborn
-
-######
-
-plt.rcParams.update({'font.size': 16})
-plt.style.use('ggplot')
 
 ########
 '''
@@ -69,6 +65,7 @@ features=meta['features']
 not_tmk_idx = np.where(y==0)[0]
 yes_tmk_idx = np.where(y>0)[0]
 ntmk = len(yes_tmk_idx)
+#ntmk = ntmk//2 # allow for random sampling of the tmk events.
 print("k: %i, L: %i, ntmk: %i"%(k,L,ntmk) )
 
 np.random.seed(10072023)
@@ -77,24 +74,28 @@ models = []
 models_coef_ = np.zeros( (nboots, 12*k) )
 
 subsets = np.zeros((nboots, 2*ntmk), dtype=int)
-trains = np.zeros((nboots, 2*ntmk))
-tests = np.zeros((nboots, 2*ntmk))
+y_trues = np.zeros((nboots, 2*ntmk))
+y_preds = np.zeros((nboots, 2*ntmk))
 aucrocs = np.zeros(nboots)
 
 for i in range(nboots):
     model = linear_model.ElasticNet(max_iter=1000, l1_ratio=0.05, positive=False) # idk lol
     
-    subset = np.concatenate( [yes_tmk_idx, np.random.choice(not_tmk_idx, ntmk, replace=False)] )
+    subset = np.concatenate([
+        np.random.choice(yes_tmk_idx, ntmk, replace=False), 
+        np.random.choice(not_tmk_idx, ntmk, replace=False)
+    ])
+    
     subsets[i] = subset
     
     model.fit(X[subset], y[subset])
     ypred = model.predict(X[subset])
     
-    trains[i] = y[subset]
-    tests[i] = ypred
+    y_trues[i] = y[subset]
+    y_preds[i] = ypred
     # can do more sophisticated things later...
     try:
-        aucrocs[i] = metrics.roc_auc_score(y[subset], ypred)
+        aucrocs[i] = metrics.roc_auc_score(y_trues[subset], ypred)
     except:
         # TODO: think through.
         # probably doing regression instead of classification
@@ -103,25 +104,37 @@ for i in range(nboots):
     models.append(model)
     models_coef_[i] = model.coef_
     
-    #print(i, '%.3f'%aucrocs[i])
+    if i%(nboots//10)==0:
+        print(f'{i+1} of {nboots}')
 #
 
-# build long dataframe solely for the purposes of visualization.
-df_results = pandas.DataFrame(data=models_coef_,columns=features).melt(var_name='Indicator', value_name='Coefficient')
-df_results['Indicator_group'] = [{'X':'S'}.get(v[0],v[0]) for v in df_results['Indicator']]
+df_weights = pandas.DataFrame(data=models_coef_,columns=features)
+
+# build long dataframe solely for the purposes of visualization
+# (seaborn aggregates/does errorbars this way; can also color bars by indicator group)
+df_results = df_weights.melt(var_name='Indicator', value_name='Coefficient')
+df_results['Indicator group'] = [{'X':'S'}.get(v[0],v[0]) for v in df_results['Indicator']]
 
 if True:
     fig,ax = plt.subplots(figsize=(12,8), constrained_layout=True)
+    seaborn.set_context("paper", font_scale=1.5)
+    #seaborn.set_style("whitegrid")
+    
     seaborn.barplot(data=df_results, y='Indicator', x='Coefficient', 
-                    alpha=0.5, hue='Indicator_group', palette='tab10', 
-                    estimator=np.median, errorbar=lambda v: np.quantile(v,[0.1,0.9]), 
-                    dodge=False, capsize=0.5, width=0.95)
+                hue='Indicator group', palette='tab10', 
+                estimator=np.median, errorbar=lambda v: np.quantile(v,[0.1,0.9]), 
+                dodge=False, capsize=0.5, width=0.95)
     
     # figure polish
-    ax.set_xlim(-max(np.abs(ax.get_xlim())), max(np.abs(ax.get_xlim())))
-    ax.axvline(0,c='k', lw=3)
-    ax.set_title('FSI indicator feature importance (predicting TMK year%i)'%(k+L-1), loc='left', fontsize=24)
-    seaborn.move_legend(ax, loc='upper left')
+    ax.set_xlim(-0.02, max(np.abs(ax.get_xlim())))
     
-    fig.savefig('FSI_predicting_TMK_no_ongoing_k%i_L%i.png'%(k,L), bbox_inches='tight')
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(0.02))
+    
+    ax.axvline(0,c='k', lw=3)
+    #ax.set_title('FSI indicator feature importance (predicting TMK year%i)'%(k+L-1), loc='left', fontsize=24)
+    seaborn.move_legend(ax, loc='upper left')
+    fig.show()
+    
+    fig.savefig(f'FSI_predicting_TMK_no_ongoing_k{k}_L{L}_{tstamp}.png', bbox_inches='tight')
+    fig.savefig(f'FSI_predicting_TMK_no_ongoing_k{k}_L{L}_{tstamp}.pdf', bbox_inches='tight')
     

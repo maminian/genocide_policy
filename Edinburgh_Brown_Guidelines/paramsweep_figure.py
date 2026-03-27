@@ -31,7 +31,7 @@ for _suffix,_df_ref in zip(['orig','vs_shuffle'], [df_no_shuffle, df_paramsweep]
     g = sns.catplot(data=_df_ref, 
                     kind='box', col='code', row='classifier',
                     x='test_size', y=WHICH, hue='shuffled', 
-                    whis=(10, 90), # the [10,90] quantile interval instead of standard boxplot
+                    #whis=(10, 90), # the [10,90] quantile interval instead of standard boxplot
                     fill=True,
                     gap=.2,
                     margin_titles=True,
@@ -83,7 +83,7 @@ for _suffix,_df_ref in zip(['orig','vs_shuffle'], [df_no_shuffle, df_paramsweep]
 # print a brief summary.
 print(
 df_paramsweep[['code', 'shuffled', 'clf', 'acc', 'f1']].groupby(['clf', 'code', 'shuffled']).agg(
-    {'acc': lambda x: list(np.quantile(x,[0.1,0.5,0.9]).round(2)),
-     'f1': lambda x: list(np.quantile(x,[0.1,0.5,0.9]).round(2))} # accepts lists but not np.arrays... even if 1d..
+    {'acc': lambda x: list(np.quantile(x,[0.025,0.5,0.975]).round(2)),
+     'f1': lambda x: list(np.quantile(x,[0.025,0.5,0.975]).round(2))} # accepts lists but not np.arrays... even if 1d..
 )
 )

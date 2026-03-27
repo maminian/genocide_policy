@@ -73,13 +73,13 @@ if __name__=="__main__":
     fig,ax = plt.subplots(2,3, figsize=(12,8), 
                           sharex=True, sharey=True, constrained_layout=True)
     
-    profile_country(df_long, 'United States', ax[0,0])
-    profile_country(df_long, 'Canada', ax[0,1])
+    profile_country(df_long, 'Canada', ax[0,0])
+    profile_country(df_long, 'United States', ax[0,1])
     profile_country(df_long, 'Mexico', ax[0,2])
     
     #
-    profile_country_brief(df_long, 'United States', ax[1,0])
-    profile_country_brief(df_long, 'Canada', ax[1,1])
+    profile_country_brief(df_long, 'Canada', ax[1,0])
+    profile_country_brief(df_long, 'United States', ax[1,1])
     profile_country_brief(df_long, 'Mexico', ax[1,2])
     
     #

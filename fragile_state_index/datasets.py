@@ -16,17 +16,19 @@ _df_fsi = load_fsi.to_long(_df_fsi)
 
 
 
-def build_fsi_predicting_tmk(k=2,L=1, min_year=2006, max_year=2023, track_ongoing=True, target='tmk'):
+def build_fsi_predicting_tmk(k=1,L=1, min_year=2006, max_year=2023, track_ongoing=True, target='tmk'):
     '''
     Inputs:
         k: integer; number of consecutive years of FSI data to use.
-            Feature vectors will be length 12k. (Default: 2)
+            Feature vectors will be length 12k. (Default: 1)
         L: integer; years after observed data to make a prediction
             of a TMK event. L=1 corresponds to "the next year".
             (Default: 1)
         min_year: integer (default: 2006)
         max_year: integer (default: 2023)
-        track_ongoing: boolean (default: True).
+        track_ongoing: boolean (default: True). 
+            Training/testing data may include ongoing events (not just the 
+            outbreak of an event)
         target: string, name of column in TMK to predict (default: tmk)
             Here, may also consider tmk.ordinal which is a relative 
             numerical score for severity of the TMK event.
