@@ -1,6 +1,4 @@
-#import pandas
-#import seaborn as sns
-from matplotlib import pyplot as plt
+
 import pandas
 import numpy as np
 
@@ -12,16 +10,15 @@ import datasets
 #
 
 from sklearn import linear_model # for Lasso, etc.
+from sklearn import ensemble     # for Random Forest, etc.
 from sklearn import metrics      # for, e.g., sklearn.metrics.roc_auc_score
+from sklearn import model_selection
 
 #
+#
 
-import seaborn
-
-######
-
-plt.rcParams.update({'font.size': 16})
-plt.style.use('ggplot')
+import datetime
+tstamp = datetime.datetime.now().strftime('%Y-%b-%d-%H:%M')
 
 ########
 '''
@@ -88,24 +85,47 @@ models = []
 models_coef_ = np.zeros( (nboots, 12*k) )
 
 subsets = np.zeros((nboots, 2*ntmk), dtype=int)
-trains = np.zeros((nboots, 2*ns))
-tests = np.zeros((nboots, 2*(ntmk-ns)))
-preds = np.zeros((nboots, 2*(ntmk-ns)))
-aucrocs = np.zeros(nboots)
+trains = np.zeros((nboots, ns))
+tests = np.zeros((nboots, ns))
+preds_lr = np.zeros((nboots, ns))
+preds_rf = np.zeros((nboots, ns))
+aucrocs_lr = np.zeros(nboots)
 
-train_idxs = np.zeros((nboots, 2*ns), dtype=int)
-test_idxs = np.zeros((nboots, 2*(ntmk-ns)), dtype=int)
+train_idxs = np.zeros((nboots, ns), dtype=int)
+test_idxs = np.zeros((nboots, ns), dtype=int)
 
 for i in range(nboots):
-    model = linear_model.LogisticRegression(max_iter=1000, penalty='elasticnet', solver='saga', l1_ratio=0.05)
+    if i%(nboots//100)==0:
+        print(f'{i} of {nboots}')
+    model = linear_model.LogisticRegression(max_iter=4000, solver='saga', l1_ratio=0.05)
+    model2 = ensemble.RandomForestClassifier()
     
+    #not_tmk_idx_choice = np.random.choice(not_tmk_idx, ntmk, replace=False)
+    #subset = np.concatenate( [yes_tmk_idx, not_tmk_idx_choice] )
+    
+    #subsets[i] = subset
+
+    
+    # force a balanced stratified selection by first manually subsetting data.
     not_tmk_idx_choice = np.random.choice(not_tmk_idx, ntmk, replace=False)
-    subset = np.concatenate( [yes_tmk_idx, not_tmk_idx_choice] )
+    _X2 = np.vstack([X[not_tmk_idx_choice], X[yes_tmk_idx]])
+    _y2 = np.hstack([y[not_tmk_idx_choice], y[yes_tmk_idx]])
+    _all_idx = np.hstack([not_tmk_idx_choice, yes_tmk_idx])
     
-    subsets[i] = subset
+    # now do stratified subsampling.
+    _sel = model_selection.StratifiedShuffleSplit(n_splits=1, test_size=ns, train_size=ns)
+
+    _split = list( _sel.split(_X2, _y2) )
+
+    #import pdb
+    #pdb.set_trace()
     
-    train_idx = np.concatenate([np.random.choice(yes_tmk_idx, ns, replace=False), np.random.choice(not_tmk_idx_choice, ns, replace=False)])
-    test_idx = np.setdiff1d(subset, train_idx)
+    train_idx = _all_idx[_split[0][0]]
+    test_idx = _all_idx[_split[0][1]]
+    
+    
+    #train_idx = np.concatenate([np.random.choice(yes_tmk_idx, ns, replace=False), np.random.choice(not_tmk_idx_choice, ns, replace=False)])
+    #test_idx = np.setdiff1d(subset, train_idx)
     
     train_idxs[i] = train_idx
     test_idxs[i] = test_idx
@@ -113,12 +133,15 @@ for i in range(nboots):
     model.fit(X[train_idx], y[train_idx])
     ypred = model.predict_proba(X[test_idx])[:,1]
     
+    model2.fit(X[train_idx], y[train_idx])
+    
     trains[i] = y[train_idx]
     tests[i] = y[test_idx]
-    preds[i] = ypred
+    preds_lr[i] = ypred # note: float (probabilities/scores)
+    preds_rf[i] = model2.predict(X[test_idx]) # note: integer
     # can do more sophisticated things later...
 
-    aucrocs[i] = metrics.roc_auc_score(tests[i], preds[i])
+    aucrocs_lr[i] = metrics.roc_auc_score(tests[i], preds_lr[i])
     
     models.append(model)
     models_coef_[i] = model.coef_
@@ -136,16 +159,21 @@ df_results['Indicator_group'] = [{'X':'S'}.get(v[0],v[0]) for v in df_results['I
 
 # table 1...
 # country, year, tmk label, predicted probability, bootstrap number
-columns = ['country', 'year', 'true_label', 'pred_prob', 'bootstrap_number']
+columns = ['country', 'year', 'true_label', 'pred_prob_lr', 'pred_lr', 'pred_rf',  'bootstrap_number']
 _cc = countries_flat[ test_idxs ].flatten()
 _yy = years_flat[ test_idxs ].flatten()
 _cy = [(_cc[i], _yy[i]) for i in range(len(_cc))]
-_tt = tests.flatten()
-_pp = preds.flatten()
-_bb = np.repeat(np.arange(nboots), 2*(ntmk-ns))
+_tt = np.array(tests.flatten(), dtype=int)
+_pp_prob_lr = preds_lr.flatten()
+_pp_lr = np.array(_pp_prob_lr>0.5, dtype=int)
+_pp_rf = np.array(preds_rf.flatten(), dtype=int)
+_bb = np.repeat(np.arange(nboots), ns)
 
-df_crossval = pandas.DataFrame({header: dat for (header,dat) in zip(columns, [_cc, _yy, _tt, _pp, _bb])})
+df_crossval = pandas.DataFrame({header: dat for (header,dat) in zip(columns, [_cc, _yy, _tt, _pp_prob_lr, _pp_lr, _pp_rf, _bb])})
 
+
+df_crossval.to_csv(f"bootstrap_pred_results_k{k}_L{L}_{tstamp}.csv", index=False)
+    
 
 # table 2...
 # bootstrap number, (country1, year1), (country2, year2), ..., (countryM, yearM) in training data.
@@ -155,8 +183,15 @@ df_crossval = pandas.DataFrame({header: dat for (header,dat) in zip(columns, [_c
 ############
 
 #
-if True:
-    all_curves = [metrics.roc_curve(tests[i],preds[i], drop_intermediate=False) for i in range(nboots)]
+if __name__=="__main__":
+
+    from matplotlib import pyplot as plt
+
+    plt.rcParams.update({'font.size': 16})
+    plt.style.use('seaborn-v0_8-whitegrid')
+
+
+    all_curves = [metrics.roc_curve(tests[i],preds_lr[i], drop_intermediate=False) for i in range(nboots)]
     all_curves = np.array(all_curves)
     # plot performance measured by AUC ROC
     fig,ax = plt.subplots(1,2, figsize=(12,6), constrained_layout=True)
@@ -165,13 +200,11 @@ if True:
     #for i in range(0, nboots, int(nboots/10000)):
     #    ax[0].plot(all_curves[i][0], all_curves[i][1], c='#666', alpha=0.1, lw=4)
     ax[0].plot(all_curves[0,0,:], all_curves[:,1,:].T, c='#666', alpha=0.1, lw=4)
-    ax[1].hist(aucrocs, bins=np.linspace(0,1,41), edgecolor='k', linewidth=0.5)
+    ax[1].hist(aucrocs_lr, bins=np.linspace(0,1,41), edgecolor='k', linewidth=0.5)
     
     ax[0].set(xlim=(0,1), ylim=(0,1), xlabel="FPR", ylabel="TPR")
     ax[1].set(xlim=(0,1), xlabel="AUCROC", ylabel="Count")
     
-    fig.savefig("bootstrap_traintest_pred_k%i_L%i.png"%(k,L), bbox_inches='tight')
-    fig.savefig("bootstrap_traintest_pred_k%i_L%i.pdf"%(k,L), bbox_inches='tight')
-    
-    df_crossval.to_csv("bootstrap_pred_results_k%i_L%i.csv"%(k,L), index=False)
+    fig.savefig(f"bootstrap_traintest_lr_auc_pred_k{k}_L{L}_{tstamp}.png", bbox_inches='tight')
+    fig.savefig(f"bootstrap_traintest_lr_auc_pred_k{k}_L{L}_{tstamp}.pdf", bbox_inches='tight')
     

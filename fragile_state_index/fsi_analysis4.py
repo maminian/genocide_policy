@@ -1,5 +1,3 @@
-#import pandas
-#import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib import ticker
 import pandas
@@ -50,8 +48,6 @@ L=1
 X,y,meta = datasets.build_fsi_predicting_tmk(k=k, L=L, track_ongoing=False)
 
 features=meta['features']
-
-
 
 # final labeled data set (!!)
 
@@ -115,10 +111,12 @@ df_weights = pandas.DataFrame(data=models_coef_,columns=features)
 df_results = df_weights.melt(var_name='Indicator', value_name='Coefficient')
 df_results['Indicator group'] = [{'X':'S'}.get(v[0],v[0]) for v in df_results['Indicator']]
 
-if True:
+if __name__=="__main__":
+    plt.rcParams.update({'legend.framealpha': 1})
+
     fig,ax = plt.subplots(figsize=(12,8), constrained_layout=True)
-    seaborn.set_context("paper", font_scale=1.5)
-    #seaborn.set_style("whitegrid")
+    seaborn.set_context("paper", font_scale=2) # font_scale doesn't seem to do anything.
+    seaborn.set_style("whitegrid")
     
     seaborn.barplot(data=df_results, y='Indicator', x='Coefficient', 
                 hue='Indicator group', palette='tab10', 
@@ -131,8 +129,17 @@ if True:
     ax.xaxis.set_major_locator(ticker.MultipleLocator(0.02))
     
     ax.axvline(0,c='k', lw=3)
+    ax.xaxis.grid(True)
     #ax.set_title('FSI indicator feature importance (predicting TMK year%i)'%(k+L-1), loc='left', fontsize=24)
     seaborn.move_legend(ax, loc='upper left')
+    
+    # sigh
+    ax.xaxis.set_tick_params(labelsize = 14)
+    ax.yaxis.set_tick_params(labelsize = 14)
+    
+    ax.set_xlabel(ax.get_xlabel(), fontsize=16)
+    ax.set_ylabel(ax.get_ylabel(), fontsize=16)
+    
     fig.show()
     
     fig.savefig(f'FSI_predicting_TMK_no_ongoing_k{k}_L{L}_{tstamp}.png', bbox_inches='tight')

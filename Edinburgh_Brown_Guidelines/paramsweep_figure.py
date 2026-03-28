@@ -76,14 +76,14 @@ for _suffix,_df_ref in zip(['orig','vs_shuffle'], [df_no_shuffle, df_paramsweep]
     fig.subplots_adjust(hspace=0.2)
 
     fig.show()
-    fig.savefig(f'paramsweep_results_{WHICH}_{_suffix}.png', bbox_inches='tight')
-    fig.savefig(f'paramsweep_results_{WHICH}_{_suffix}.pdf', bbox_inches='tight')
+#    fig.savefig(f'paramsweep_results_{WHICH}_{_suffix}.png', bbox_inches='tight')
+#    fig.savefig(f'paramsweep_results_{WHICH}_{_suffix}.pdf', bbox_inches='tight')
 #
 
 # print a brief summary.
 print(
 df_paramsweep[['code', 'shuffled', 'clf', 'acc', 'f1']].groupby(['clf', 'code', 'shuffled']).agg(
-    {'acc': lambda x: list(np.quantile(x,[0.025,0.5,0.975]).round(2)),
-     'f1': lambda x: list(np.quantile(x,[0.025,0.5,0.975]).round(2))} # accepts lists but not np.arrays... even if 1d..
+    {'acc': lambda x: list(np.quantile(x,[0.25,0.5,0.75]).round(2)),
+     'f1': lambda x: list(np.quantile(x,[0.25,0.5,0.75]).round(2))} # accepts lists but not np.arrays... even if 1d..
 )
 )
